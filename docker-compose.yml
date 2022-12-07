@@ -1,0 +1,56 @@
+
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: app.dockerfile
+    image: alexandrfiner_serverlog
+    container_name: appserver_logger
+    tty: true
+    volumes:
+        - ./script.sh:/home/script.sh
+        - ./entry.sh:/home/entry.sh
+        - ./crontab.txt:/home/crontab.txt
+        - ./server/nginx/logs/:/home/logs/
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: httpserver_logger
+    tty: true
+    ports:
+      - "9999:80"
+    volumes:
+        - ./app:/var/www:z
+        - ./server/nginx/conf.d/:/etc/nginx/conf.d/
+        - ./server/nginx/logs/:/var/log/nginx/
+
+    networks:
+      - app-network
+
+  ftp:
+    image: stilliard/pure-ftpd:hardened
+    container_name: ftpserver_logger
+    tty: true
+
+    ports:
+      - 21:21
+      - 20:20
+      - 30000-30009:30000-30009
+
+    volumes:
+      - './ftp/data:/home/username/'
+      - './ftp/pass:/etc/pure-ftpd/passwd'
+    environment:
+      PUBLICHOST: "localhost"
+      FTP_USER_NAME: "user"
+      FTP_USER_PASS: "pass"
+      FTP_USER_HOME: "/home/username"
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
